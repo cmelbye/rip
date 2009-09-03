@@ -35,7 +35,12 @@ module Rip
           package.fetch
           package.unpack
 
-          parent_package = (parent && parent.meta_package?) ? parent.actual_package : parent
+          if parent && parent.meta_package?
+            parent_package = parent.actual_package
+          else
+            parent_package = parent
+          end
+
           manager.add_package(package, parent) unless package.meta_package?
 
           install_dependencies(package)
