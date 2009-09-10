@@ -65,18 +65,6 @@ module Rip
       Dir.chdir(cache_path) do
         git_cat_file(@version).size > 0 || version_is_branch?
       end
-
-      v = remote_refs.detect { |commit, ref|
-        commit.include?(@version) || ref.include?(@version)
-      }
-      return nil unless v
-      @version = v.first
-    end
-
-    memoize :remote_refs
-    def remote_refs
-      git_ls_remote(source).each_line.
-        map { |l| l.chomp.split("\t") }
     end
 
     def version_is_branch?
