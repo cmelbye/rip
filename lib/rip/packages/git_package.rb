@@ -18,7 +18,7 @@ module Rip
     end
 
     def version
-      @version
+      @version || 'master'
     end
 
     def exists?
