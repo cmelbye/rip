@@ -8,6 +8,10 @@ end
 
 task :default => :test
 
+task :knock do
+  exec "./t/test-git | ./t/knock/kn-agg"
+end
+
 begin
   require 'jeweler'
 
