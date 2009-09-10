@@ -49,12 +49,6 @@ ok "! installed added.rb"
 
 rip uninstall test_repo
 
-echo "# with the version specified as a ref"
-rip install git://127.0.0.1/test_repo refs/heads/foobranch
-ok "installed foobranch.rb"
-
-rip uninstall test_repo
-
 echo "# with the version specified as a branch"
 rip install git://127.0.0.1/test_repo foobranch
 ok "installed foobranch.rb"
