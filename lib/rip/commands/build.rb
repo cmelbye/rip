@@ -5,6 +5,8 @@
 
 module Rip
   module Commands
+    o 'rip build PACKAGE'
+    x "Attempts to build a package using extconf.rb"
     def build(options={}, *packages)
       packages.each do |package_name|
         package = manager.package(package_name)
@@ -19,7 +21,8 @@ module Rip
           build_dir = File.dirname(build_file)
           Dir.chdir(build_dir) do
             system "ruby extconf.rb"
-            system "make install RUBYARCHDIR=#{manager.dir}/lib"
+            system "make clean"
+            system "make install sitearchdir=#{manager.dir}/lib"
           end
         end
 

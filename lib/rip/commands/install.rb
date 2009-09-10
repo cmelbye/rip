@@ -24,15 +24,16 @@ module Rip
         ui.abort "I don't know how to install #{source}"
       end
 
-      if options[:f]
-        Installer.new.uninstall(package) if package.installed?
+      installed_package = manager.package(package.name)
+
+      if options[:f] && installed_package
+        Installer.new.uninstall(installed_package) if installed_package.installed?
         Installer.new.install(package)
       elsif package.installed?
         ui.puts "#{package} already installed"
       else
         installer = Installer.new
         installer.install(package)
-#         puts "#{installer.installed.size.to_i} packages installed"
       end
     end
   end

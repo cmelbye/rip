@@ -1,6 +1,6 @@
 module Rip
   module Version
-    VERSION = "0.0.2"
+    VERSION = "0.0.5"
 
     def self.to_s
       VERSION

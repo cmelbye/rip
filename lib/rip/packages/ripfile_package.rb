@@ -18,6 +18,10 @@ module Rip
     def version
       nil
     end
+    
+    def actual_package
+      nil
+    end
 
     def meta_package?
       true
@@ -45,7 +49,12 @@ module Rip
 
     def dependencies!
       if File.exists? deps = File.join(cache_path, name)
-        File.readlines(deps).map do |line|
+        lines = File.readlines(deps)
+
+        # Ignore blank lines and comments
+        lines = lines.select { |l| l =~ /\S/ && l !~ /^#/ }
+
+        lines.map do |line|
           package_source, version, *extra = line.split(' ')
           if package = Package.for(package_source, version)
             package

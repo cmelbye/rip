@@ -4,7 +4,7 @@ module Rip
     def list(*args)
       ui.puts 'ripenv: ' + Rip::Env.active, ''
       if manager.packages.any?
-        ui.puts manager.packages
+        ui.puts manager.packages.sort_by { |p| p.to_s }
       else
         ui.puts "nothing installed"
       end
@@ -28,11 +28,18 @@ module Rip
     x 'Type rip env to see valid options.'
     def env(options = {}, command = nil, *args)
       if command && Rip::Env.commands.include?(command)
+        args.push(options)
         ui.puts 'ripenv: ' + Rip::Env.call(command, *args).to_s
       else
-        show_help :env, Rip::Env.commands
+        Rip::Env.show_help :env
         ui.puts '', "current ripenv: #{Rip::Env.active}"
       end
+    end
+
+    o 'rip use RIPENV'
+    x 'Activates a ripenv. Shortcut for `rip env use`.'
+    def use(options = {}, ripenv = nil, *args)
+      puts 'ripenv: ' + Rip::Env.use(ripenv.to_s)
     end
 
     x 'Outputs all installed libraries (and their versions) for the active env.'
@@ -50,22 +57,12 @@ module Rip
     end
 
   private
-    def show_help(command, commands)
-      subcommand = command.to_s.empty? ? nil : "#{command} "
-      ui.puts "Usage: rip #{subcommand}COMMAND [options]", ""
-      ui.puts "Commands available:"
-
-      commands.each do |method|
-        ui.puts "  #{method}"
-      end
-    end
-
     def show_general_help
       commands = public_instance_methods.reject do |method|
         method =~ /-/ || %w( help version ).include?(method)
       end
 
-      show_help nil, commands
+      show_help nil, commands.sort
 
       ui.puts
       ui.puts "For more information on a a command use:"

@@ -6,63 +6,53 @@ module Rip
       RemoteGemPackage.new(source).exists?
     end
 
-    @@remotes = %w( gems.github.com gems.rubyforge.org )
-    @@exists_cache = {}
-
-    def exists?
-      return false unless source =~ /^[\w-]+$/
-      return true if @@exists_cache[source] || File.exists?(cache_path)
-
-      FileUtils.mkdir_p cache_path
-
-      Dir.chdir cache_path do
-        @@remotes.each do |remote|
-          ui.puts "Searching %s for %s..." % [ remote, source ]
-
-          source_flag = "--source=http://#{remote}/"
-          if rgem("fetch #{source} #{source_flag}") =~ /Downloaded (.+)/
-            @@exists_cache[source] = $1
-            return true
-          end
-        end
-      end
-
-      false
-    end
-
-    def rgem(command)
-      Timeout.timeout(5) do
-        `#{gembin} #{command}`
-      end
-    rescue Timeout::Error
-      ''
-    end
-
     def meta_package?
       true
     end
 
+    def exists?
+      File.exists?(cache_path) || Sh::Gem.exists?(source)
+    end
+
     def fetch!
+      return if File.exists?(cache_path)
+      FileUtils.mkdir_p cache_path
+
+      Dir.chdir cache_path do
+        ui.puts "Fetching #{self} via Rubygems..."
+        unless Sh::Gem.fetch(source, version)
+          FileUtils.rm_rf cache_path
+          ui.abort "Couldn't find gem #{source} in any of your gem sources"
+        end
+      end
     end
 
     def unpack!
       installer = Installer.new
-      installer.install actual_package
+      installer.install actual_package, self
       installer.manager.sources[actual_package.name] = source
       installer.manager.save
     end
 
+    def dependencies!
+      actual_package.dependencies
+    end
+
+    def files
+      actual_package.files
+    end
+
     def version
-      actual_package ? actual_package.version : super
+      local_gem ? actual_package.version : @version
     end
 
     memoize :actual_package
     def actual_package
-      Package.for(Dir[cache_path + '/*'].first)
+      Package.for(local_gem)
     end
 
-    def gembin
-      ENV['GEMBIN'] || 'gem'
+    def local_gem
+      Dir[cache_path + '/*'].first
     end
   end
 end

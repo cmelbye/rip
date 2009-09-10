@@ -40,13 +40,13 @@ module Rip
           git_fetch('origin')
         end
       else
-        git_clone(source, cache_name)
+        git_clone(source, cache_path)
       end
     end
 
     def unpack!
       Dir.chdir cache_path do
-        git_reset_hard(version)
+        git_reset_hard version_is_branch? ? "origin/#{version}" : version
         git_submodule_init
         git_submodule_update
       end
@@ -58,10 +58,12 @@ module Rip
     end
 
     def remote_exists?
-      @version ||= "HEAD"
-      if @version.size == 40 || @version.size == 7
-        fetch!
-        return Dir.chdir(cache_path) { git_cat_file(@version).size > 0 }
+      return false if git_ls_remote(source).size == 0
+      return true if !@version
+
+      fetch
+      Dir.chdir(cache_path) do
+        git_cat_file(@version).size > 0 || version_is_branch?
       end
 
       v = remote_refs.detect { |commit, ref|
@@ -75,6 +77,10 @@ module Rip
     def remote_refs
       git_ls_remote(source).each_line.
         map { |l| l.chomp.split("\t") }
+    end
+
+    def version_is_branch?
+      git_cat_file("origin/#{version}").size > 0
     end
   end
 end

@@ -1,12 +1,14 @@
 module Rip
   module Env
     extend self
+    extend Help
     PRIVATE_ENV =  /^(rip-|active)/i
 
     def commands
-      instance_methods - %w( call active_dir commands ui )
+      instance_methods - %w( call active_dir commands ui validate_ripenv )
     end
 
+    x 'Create the SOURCE environment.'
     def create(env)
       dir = File.join(Rip.dir, env)
 
@@ -29,28 +31,26 @@ module Rip
       end
     end
 
+    x 'Activate the SOURCE environment.'
     def use(env)
       if env.strip.empty?
         return "must give a ripenv to use"
       end
 
-      if env.strip =~ PRIVATE_ENV
-        return "invalid environment name"
-      end
-
-      if !File.exists?(target = File.join(Rip.dir, env))
-        return "#{env} doesn't exist"
+      if error = validate_ripenv(env)
+        return error
       end
 
       begin
         FileUtils.rm active_dir
       rescue Errno::ENOENT
       end
-      FileUtils.ln_s(target, active_dir)
+      FileUtils.ln_s(File.join(Rip.dir, env), active_dir)
 
       "using #{env}"
     end
 
+    x 'Remove the SOURCE environment.'
     def delete(env)
       if active == env
         return "can't delete active environment"
@@ -72,7 +72,14 @@ module Rip
       end
     end
 
-    def list(env = nil)
+    x 'Display all rip environments.'
+    def list(options = {})
+      # check if we got passed an env. kinda ghetto.
+      if options.is_a? String
+        target_env = options
+        options = {}
+      end
+
       envs = Dir.glob(File.join(Rip.dir, '*')).map do |env|
         env.split('/').last
       end
@@ -81,16 +88,38 @@ module Rip
 
       if envs.empty?
         "none. make one with `rip env create <env>`"
+      elsif target_env
+        if error = validate_ripenv(target_env)
+          return error
+        end
+
+        manager = PackageManager.new(target_env)
+        output  = [ target_env, "" ]
+        output += manager.packages
+        output.join("\n")
       else
-        envs.join(' ')
+        output  = [ "all installed ripenvs", "" ]
+        output += envs.map do |env|
+          prefix = Rip::Env.active == env ? "* " : "  "
+          if options[:p]
+            packages = PackageManager.new(env).packages
+            packages = packages.size > 3 ? packages[0, 3] + ['...'] : packages
+            "#{prefix}#{env} - #{packages.join(', ')}"
+          else
+            "#{prefix}#{env}"
+          end
+        end
+        output.join("\n")
       end
     end
 
+    x 'Display the name of the active environment.'
     def active
       active = File.readlink(active_dir)
       active.split('/').last
     end
 
+    x 'Clone the active environment.'
     def copy(new)
       if new.strip.empty?
         return "must give a ripenv to copy to"
@@ -139,6 +168,16 @@ module Rip
 
     def ui
       Rip.ui
+    end
+
+    def validate_ripenv(env)
+      if env.strip =~ PRIVATE_ENV
+        return "invalid environment name"
+      end
+
+      if !File.exists?(File.join(Rip.dir, env))
+        return "#{env} doesn't exist"
+      end
     end
   end
 end

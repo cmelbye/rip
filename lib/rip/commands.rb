@@ -1,6 +1,7 @@
 module Rip
   module Commands
     extend self
+    extend Help
 
     def invoke(args)
       command, options, args = parse_args(args)
@@ -41,30 +42,6 @@ module Rip
     end
 
   private
-    # tasty dsl for adding help text
-
-    def o(usage)
-      @usage ||= {}
-      @next_usage = usage
-    end
-
-    def x(help = '')
-      @help ||= {}
-      @next_help ||= []
-      @next_help.push help
-    end
-
-    def method_added(method)
-      @help[method.to_s] = @next_help if @next_help
-      @usage[method.to_s] = @next_usage if @next_usage
-      @next_help = nil
-      @next_usage = nil
-    end
-
-    def ui
-      Rip.ui
-    end
-
     def manager(env = nil)
       @manager ||= PackageManager.new(env)
     end
@@ -105,6 +82,13 @@ end
 # rip plugin commands
 #
 
+# load lib/rip/commands/*.rb from rip itself
+if File.exists? dir = File.join(File.dirname(__FILE__), 'commands')
+  Dir[dir + '/*.rb'].each do |file|
+    Rip::Commands.load_plugin(file)
+  end
+end
+
 # load ~/.rip/rip-commands/*.rb
 if File.exists? dir = File.join(Rip.dir, 'rip-commands')
   Dir[dir + '/*.rb'].each do |file|
@@ -114,14 +98,6 @@ end
 
 # load lib/rip/commands/*.rb from the active ripenv
 if File.exists? dir = File.join(Rip::Env.active_dir, 'lib', 'rip', 'commands')
-  Dir[dir + '/*.rb'].each do |file|
-    Rip::Commands.load_plugin(file)
-  end
-end
-
-
-# load lib/rip/commands/*.rb from rip itself
-if File.exists? dir = File.join(File.dirname(__FILE__), 'commands')
   Dir[dir + '/*.rb'].each do |file|
     Rip::Commands.load_plugin(file)
   end

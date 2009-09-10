@@ -25,8 +25,6 @@ module Rip
         begin
           installed = @installed[package.name] || package.installed?
 
-          manager.add_package(package, parent) unless package.meta_package?
-
           return if installed
           @installed[package.name] = package
 
@@ -36,6 +34,15 @@ module Rip
 
           package.fetch
           package.unpack
+
+          if parent && parent.meta_package?
+            parent_package = parent.actual_package
+          else
+            parent_package = parent
+          end
+
+          manager.add_package(package, parent) unless package.meta_package?
+
           install_dependencies(package)
           build_extensions(package)
           copy_files(package)
@@ -43,7 +50,7 @@ module Rip
           ui.puts "Successfully installed #{package}" unless package.meta_package?
           true
 
-        rescue VersionConflict => e
+        rescue FileConflict, VersionConflict => e
           ui.puts e.message
           rollback
           ui.abort "installation failed"
@@ -107,8 +114,20 @@ module Rip
             next if @uninstalled[package.name]
             @uninstalled[package.name] = true
 
+            dirs = []
+
             package.files.each do |file|
-              FileUtils.rm_rf file
+              if File.directory?(file)
+                dirs << file
+                next
+              end
+              FileUtils.rm file
+            end
+
+            dirs.sort.reverse.each do |dir|
+              if Dir["#{dir}/*"].empty?
+                FileUtils.rmdir dir
+              end
             end
 
             manager.remove_package(package)
